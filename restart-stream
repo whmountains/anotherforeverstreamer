@@ -1,0 +1,106 @@
+#!/usr/bin/env node
+
+var pidof = require('pidof');
+var child = require('child_process');
+var fs    = require('fs');
+
+// var getStreamURL = function(doneGetting) {
+//   fs.readFile('/boot/config.txt', {encoding: 'utf-8'}, function(err, contents) {
+//
+//     if (err) {
+//       doneGetting(err);
+//       return;
+//     }
+//
+//     var url = contents.match(/#streamURL (.+)\n/)[1];
+//
+//     if (!url) {
+//       doneGetting("url not found");
+//       return;
+//     }
+//
+//     doneGetting(null, url);
+//
+//   });
+// };
+
+var getVlcPid = function(doneChecking) {
+  //check if vlc is running
+  pidof('vlc', function (err, pid) {
+      if (err) {
+        console.log('Weird error getting PID of vlc: ' + err);
+        doneChecking('Weird error getting PID of vlc: ' + err);
+      }
+      else {
+        doneChecking(null, pid);
+      }
+  });
+};
+
+var startVlc = function() {
+  var vlc = child.spawn('/usr/bin/cvlc', ['http://ice.eleden.com:8000/siloh.aac', '--intf', 'dummy'], {
+    detached: true,
+    cwd: __dirname
+  });
+
+  vlc.stdout.on('data', function(data) {
+    process.stdout.write(data);
+  });
+
+  vlc.stderr.on('data', function(data) {
+    process.stderr.write(data);
+  });
+};
+
+//get vlc's pid
+getVlcPid(function(err, vlcPid) {
+
+  if (!vlcPid) {
+    console.log("vlc isn't running.  starting it in 5 seconds");
+    setTimeout(startVlc, 5000);
+  }
+  else {
+    console.log("asking vlc (pid %s) to stop", vlcPid);
+
+    //ask vlc to stop
+    process.kill(vlcPid);
+
+    console.log('vlc may have stoped');
+
+    var totalPausedTime = -500;
+
+    setTimeout(function hardKillIfNeeded() {
+
+      totalPausedTime += 500;
+
+      console.log("checking if vlc has stopped: (total paused time: %s)", totalPausedTime);
+
+      //check if vlc is still running
+      getVlcPid(function(err, vlcPid) {
+        //start vlc in 0.1 seconds if it's stopped
+        if (!vlcPid) {
+          console.log('vlc has stopped.  starting it in 5 seconds');
+          setTimeout(startVlc, 5000);
+        }
+        else {
+          //check again if vlc is stopped in 0.5 seconds
+          //if we've been waiting for less than 20 seconds
+          if (totalPausedTime < 20000) {
+            console.log("we've only been waiting %s seconds so we'll check again in another half second", totalPausedTime);
+            setTimeout(hardKillIfNeeded, 500);
+          }
+          //it seems that our time is up.
+          //hard kill vlc and start it again in 5 seconds
+          else {
+            console.log("time's up!  hard killing vlc and restarting it in 5 seconds");
+            //hard kill vlc
+            process.kill(vlcPid, 'SIGKILL');
+            setTimeout(startVlc, 5000);
+          }
+        }
+      });
+
+    }, 100);
+  }
+
+});

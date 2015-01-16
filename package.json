@@ -1,0 +1,28 @@
+{
+  "name": "foreverstreamer",
+  "version": "1.0.0",
+  "description": "never stop streaming",
+  "main": "foreverstreamer.js",
+  "scripts": {
+    "test": "./sample-peak"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/whmountains/foreverstreamer"
+  },
+  "keywords": [
+    "stream",
+    "vlc",
+    "forever"
+  ],
+  "author": "whmountains",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/whmountains/foreverstreamer/issues"
+  },
+  "homepage": "https://github.com/whmountains/foreverstreamer",
+  "dependencies": {
+    "async": "^0.9.0",
+    "pidof": "^1.0.2"
+  }
+}
